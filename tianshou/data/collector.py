@@ -290,7 +290,7 @@ class Collector(object):
 
             if render:
                 self.env.render()
-                time.sleep(render)
+                # time.sleep(render)
 
             # add data into the buffer
             if self.preprocess_fn:

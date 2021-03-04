@@ -34,7 +34,7 @@ class MLP(nn.Module):
     :param hidden_sizes: shape of MLP passed in as a list, not incluing
         input_dim and output_dim.
     :param norm_layer: use which normalization before activation, e.g.,
-        ``nn.LayerNorm`` and ``nn.BatchNorm1d``, defaults to no normalization.
+        ``nn.LayerNorm`` and ``nn.BatchNorm1d``. Default to no normalization.
         You can also pass a list of normalization modules with the same length
         of hidden_sizes, to use different normalization module in different
         layers. Default to no normalization.
@@ -90,7 +90,55 @@ class MLP(nn.Module):
     ) -> torch.Tensor:
         x = torch.as_tensor(
             x, device=self.device, dtype=torch.float32)  # type: ignore
-        return self.model(x.flatten(1))
+        return self.model(x.flatten(1))     # Output [1, 128]
+
+class custom1(nn.Module):
+    def __init__(
+        self,
+        input_dim: int,
+        output_dim: int = 0,
+        hidden_sizes: Sequence[int] = (),
+        norm_layer: Optional[Union[ModuleType, Sequence[ModuleType]]] = None,
+        activation: Optional[Union[ModuleType, Sequence[ModuleType]]]
+        = nn.ReLU,
+        device: Optional[Union[str, int, torch.device]] = None,
+    ) -> None:
+        super().__init__()
+        self.device = device
+        hidden_size = 1024
+        input_dim = 6
+
+        self.block1 = nn.Sequential(
+            nn.Conv1d(input_dim, hidden_size, kernel_size=8, dilation=2, stride=2),
+            nn.BatchNorm1d(hidden_size),
+            nn.ReLU(),
+            
+            nn.Conv1d(hidden_size, hidden_size, kernel_size=5, dilation=4, stride=2),
+            nn.BatchNorm1d(hidden_size),
+            nn.ReLU(),
+
+            nn.Conv1d(hidden_size, hidden_size, kernel_size=3, dilation=2),
+            nn.BatchNorm1d(hidden_size),
+            nn.ReLU(),
+
+            nn.Conv1d(hidden_size, hidden_size, kernel_size=3, dilation=2),
+            nn.BatchNorm1d(hidden_size),
+            nn.ReLU(),
+
+            nn.Conv1d(hidden_size, input_dim, kernel_size=1),
+            nn.AvgPool1d(3, padding=1, stride=2),
+        )
+
+        self.output_dim = 486
+
+    def forward(
+        self, x: Union[np.ndarray, torch.Tensor]        # x = [1, 720, 6]
+    ) -> torch.Tensor:
+        x = torch.as_tensor(
+            x, device=self.device, dtype=torch.float32)  # type: ignore
+        x = x.permute(0, 2, 1)
+
+        return self.block1(x)        
 
 
 class Net(nn.Module):
@@ -103,7 +151,7 @@ class Net(nn.Module):
     :param action_shape: int or a sequence of int of the shape of action.
     :param hidden_sizes: shape of MLP passed in as a list.
     :param norm_layer: use which normalization before activation, e.g.,
-        ``nn.LayerNorm`` and ``nn.BatchNorm1d``, defaults to no normalization.
+        ``nn.LayerNorm`` and ``nn.BatchNorm1d``. Default to no normalization.
         You can also pass a list of normalization modules with the same length
         of hidden_sizes, to use different normalization module in different
         layers. Default to no normalization.
@@ -118,13 +166,13 @@ class Net(nn.Module):
     :param bool concat: whether the input shape is concatenated by state_shape
         and action_shape. If it is True, ``action_shape`` is not the output
         shape, but affects the input shape only.
-    :param int num_atoms: in order to expand to the net of distributional RL,
-         defaults to 1 (not use).
+    :param int num_atoms: in order to expand to the net of distributional RL.
+        Default to 1 (not use).
     :param bool dueling_param: whether to use dueling network to calculate Q
         values (for Dueling DQN). If you want to use dueling option, you should
         pass a tuple of two dict (first for Q and second for V) stating
         self-defined arguments as stated in
-        class:`~tianshou.utils.net.common.MLP`. Defaults to None.
+        class:`~tianshou.utils.net.common.MLP`. Default to None.
 
     .. seealso::
 
@@ -159,8 +207,14 @@ class Net(nn.Module):
             input_dim += action_dim
         self.use_dueling = dueling_param is not None
         output_dim = action_dim if not self.use_dueling and not concat else 0
-        self.model = MLP(input_dim, output_dim, hidden_sizes,
-                         norm_layer, activation, device)
+        
+        # Custom models
+        # self.model = MLP(input_dim, output_dim, hidden_sizes,
+        #                  norm_layer, activation, device)
+        self.model = custom1(input_dim, output_dim, hidden_sizes,
+                         norm_layer, activation, device)                   
+        
+        
         self.output_dim = self.model.output_dim
         if self.use_dueling:  # dueling DQN
             q_kwargs, v_kwargs = dueling_param  # type: ignore
