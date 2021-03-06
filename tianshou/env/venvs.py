@@ -239,7 +239,7 @@ class BaseVectorEnv(gym.Env):
         obs_stack, rew_stack, done_stack, info_stack = map(np.stack, zip(*result))
         if self.obs_rms and self.update_obs_rms:
             self.obs_rms.update(obs_stack)
-        return [self.normalize_obs(obs_stack), rew_stack, done_stack, info_stack]
+        return [self.normalize_obs(obs_stack), rew_stack, done_stack, info_stack]   # But not enabled - Doing obs normalizing
 
     def seed(
         self, seed: Optional[Union[int, List[int]]] = None
