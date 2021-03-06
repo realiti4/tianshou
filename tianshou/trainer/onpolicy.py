@@ -88,10 +88,14 @@ def onpolicy_trainer(
     train_collector.reset_stat()
     test_collector.reset_stat()
     test_in_train = test_in_train and train_collector.policy == policy
-    test_result = test_episode(policy, test_collector, test_fn, 0, episode_per_test,
-                               logger, env_step, reward_metric)
+    
+    # # Disable test in the beginning
+    # test_result = test_episode(policy, test_collector, test_fn, 0, episode_per_test,
+    #                            logger, env_step, reward_metric)    
+    # best_reward, best_reward_std = test_result["rew"], test_result["rew_std"]
+    best_reward, best_reward_std = 0, 0
+    
     best_epoch = 0
-    best_reward, best_reward_std = test_result["rew"], test_result["rew_std"]
     for epoch in range(1, 1 + max_epoch):
         # train
         policy.train()
@@ -134,7 +138,7 @@ def onpolicy_trainer(
                 losses = policy.update(
                     0, train_collector.buffer,
                     batch_size=batch_size, repeat=repeat_per_collect)
-                train_collector.reset_buffer()
+                train_collector.reset_buffer()      # what is this? not reseted, resets the index so can be overwritten
                 step = max([1] + [
                     len(v) for v in losses.values() if isinstance(v, list)])
                 gradient_step += step

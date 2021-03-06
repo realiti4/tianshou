@@ -21,7 +21,6 @@ def miniblock(
         layers += [activation()]
     return layers
 
-
 class MLP(nn.Module):
     """Simple MLP backbone.
 
@@ -148,6 +147,8 @@ class Net(nn.Module):
         concat: bool = False,
         num_atoms: int = 1,
         dueling_param: Optional[Tuple[Dict[str, Any], Dict[str, Any]]] = None,
+        custom_model = None,
+        custom_output_dim = None,
     ) -> None:
         super().__init__()
         self.device = device
@@ -159,8 +160,19 @@ class Net(nn.Module):
             input_dim += action_dim
         self.use_dueling = dueling_param is not None
         output_dim = action_dim if not self.use_dueling and not concat else 0
-        self.model = MLP(input_dim, output_dim, hidden_sizes,
-                         norm_layer, activation, device)
+
+        # Custom models
+        if custom_model is None:
+            self.model = MLP(input_dim, output_dim, hidden_sizes,
+                            norm_layer, activation, device)
+        else:
+            assert custom_output_dim is not None, 'pass output_dim for dilated cnn'
+            input_dim = state_shape[1]
+            if concat:
+                input_dim += action_dim
+            self.model = custom_model(input_dim, custom_output_dim, hidden_sizes,
+                            norm_layer, activation, device)
+
         self.output_dim = self.model.output_dim
         if self.use_dueling:  # dueling DQN
             q_kwargs, v_kwargs = dueling_param  # type: ignore
@@ -191,7 +203,7 @@ class Net(nn.Module):
                 q = q.view(bsz, -1, self.num_atoms)
                 v = v.view(bsz, -1, self.num_atoms)
             logits = q - q.mean(dim=1, keepdim=True) + v
-        elif self.num_atoms > 1:
+        elif self.num_atoms > 1:        # what is this
             logits = logits.view(bsz, -1, self.num_atoms)
         if self.softmax:
             logits = torch.softmax(logits, dim=-1)
