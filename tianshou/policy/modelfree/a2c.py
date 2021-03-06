@@ -59,7 +59,11 @@ class A2CPolicy(PGPolicy):
         max_grad_norm: Optional[float] = None,
         gae_lambda: float = 0.95,
         max_batchsize: int = 256,
+<<<<<<< HEAD
         use_mixed=False,
+=======
+        used_mixed=False,
+>>>>>>> 330aac4 (merged)
         **kwargs: Any
     ) -> None:
         super().__init__(actor, optim, dist_fn, **kwargs)
@@ -71,8 +75,13 @@ class A2CPolicy(PGPolicy):
         self._grad_norm = max_grad_norm
         self._batch = max_batchsize
 
+<<<<<<< HEAD
         self.use_mixed = use_mixed
         self.scaler = GradScaler(enabled=self.use_mixed)
+=======
+        self.used_mixed = used_mixed
+        self.scaler = GradScaler(enabled=self.used_mixed)
+>>>>>>> 330aac4 (merged)
 
     def process_fn(
         self, batch: Batch, buffer: ReplayBuffer, indice: np.ndarray
