@@ -141,3 +141,6 @@ class A2CPolicy(PGPolicy):
             "loss/vf": vf_losses,
             "loss/ent": ent_losses,
         }
+
+    def act(self, *args, **kwargs):
+        return self.forward(*args, **kwargs)

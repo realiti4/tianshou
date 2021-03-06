@@ -21,6 +21,53 @@ def miniblock(
         layers += [activation()]
     return layers
 
+class custom1(nn.Module):
+    def __init__(
+        self,
+        input_dim: int,
+        output_dim: int = 0,
+        hidden_sizes: Sequence[int] = (),
+        norm_layer: Optional[Union[ModuleType, Sequence[ModuleType]]] = None,
+        activation: Optional[Union[ModuleType, Sequence[ModuleType]]]
+        = nn.ReLU,
+        device: Optional[Union[str, int, torch.device]] = None,
+    ) -> None:
+        super().__init__()
+        self.device = device
+        hidden_size = 1024
+        input_dim = 6
+
+        self.block1 = nn.Sequential(
+            nn.Conv1d(input_dim, hidden_size, kernel_size=8, dilation=2, stride=2),
+            nn.BatchNorm1d(hidden_size),
+            nn.ReLU(),
+
+            nn.Conv1d(hidden_size, hidden_size, kernel_size=5, dilation=4, stride=2),
+            nn.BatchNorm1d(hidden_size),
+            nn.ReLU(),
+
+            nn.Conv1d(hidden_size, hidden_size, kernel_size=3, dilation=2),
+            nn.BatchNorm1d(hidden_size),
+            nn.ReLU(),
+
+            nn.Conv1d(hidden_size, hidden_size, kernel_size=3, dilation=2),
+            nn.BatchNorm1d(hidden_size),
+            nn.ReLU(),
+
+            nn.Conv1d(hidden_size, input_dim, kernel_size=1),
+            nn.AvgPool1d(3, padding=1, stride=2),
+        )
+
+        self.output_dim = 486
+
+    def forward(
+        self, x: Union[np.ndarray, torch.Tensor]        # x = [1, 720, 6]
+    ) -> torch.Tensor:
+        x = torch.as_tensor(
+            x, device=self.device, dtype=torch.float32)  # type: ignore
+        x = x.permute(0, 2, 1)
+
+        return self.block1(x)
 
 class MLP(nn.Module):
     """Simple MLP backbone.
@@ -159,8 +206,13 @@ class Net(nn.Module):
             input_dim += action_dim
         self.use_dueling = dueling_param is not None
         output_dim = action_dim if not self.use_dueling and not concat else 0
-        self.model = MLP(input_dim, output_dim, hidden_sizes,
+
+        # Custom models
+        # self.model = MLP(input_dim, output_dim, hidden_sizes,
+        #                  norm_layer, activation, device)
+        self.model = custom1(input_dim, output_dim, hidden_sizes,
                          norm_layer, activation, device)
+
         self.output_dim = self.model.output_dim
         if self.use_dueling:  # dueling DQN
             q_kwargs, v_kwargs = dueling_param  # type: ignore
