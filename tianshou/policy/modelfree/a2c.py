@@ -2,6 +2,9 @@ import torch
 import numpy as np
 from torch import nn
 import torch.nn.functional as F
+from torch.cuda.amp import autocast
+from torch.cuda.amp import GradScaler
+
 from typing import Any, Dict, List, Type, Union, Optional
 
 from tianshou.policy import PGPolicy
@@ -51,6 +54,7 @@ class A2CPolicy(PGPolicy):
         gae_lambda: float = 0.95,
         reward_normalization: bool = False,
         max_batchsize: int = 256,
+        used_mixed=False,
         **kwargs: Any
     ) -> None:
         super().__init__(None, optim, dist_fn, discount_factor, **kwargs)
@@ -63,6 +67,9 @@ class A2CPolicy(PGPolicy):
         self._grad_norm = max_grad_norm
         self._batch = max_batchsize
         self._rew_norm = reward_normalization
+
+        self.used_mixed = used_mixed
+        self.scaler = GradScaler(enabled=self.used_mixed)
 
     def process_fn(
         self, batch: Batch, buffer: ReplayBuffer, indice: np.ndarray
@@ -115,22 +122,30 @@ class A2CPolicy(PGPolicy):
         for _ in range(repeat):
             for b in batch.split(batch_size, merge_last=True):
                 self.optim.zero_grad()
-                dist = self(b).dist
-                v = self.critic(b.obs).flatten()
-                a = to_torch_as(b.act, v)
-                r = to_torch_as(b.returns, v)
-                log_prob = dist.log_prob(a).reshape(len(r), -1).transpose(0, 1)
-                a_loss = -(log_prob * (r - v).detach()).mean()
-                vf_loss = F.mse_loss(r, v)  # type: ignore
-                ent_loss = dist.entropy().mean()
-                loss = a_loss + self._weight_vf * vf_loss - self._weight_ent * ent_loss
-                loss.backward()
+                with autocast(enabled=self.used_mixed):
+                    dist = self(b).dist
+                    v = self.critic(b.obs).flatten()
+                    a = to_torch_as(b.act, v)
+                    r = to_torch_as(b.returns, v)
+                    log_prob = dist.log_prob(a).reshape(len(r), -1).transpose(0, 1)
+                    a_loss = -(log_prob * (r - v).detach()).mean()
+                    vf_loss = F.mse_loss(r, v)  # type: ignore
+                    ent_loss = dist.entropy().mean()
+                    loss = a_loss + self._weight_vf * vf_loss - self._weight_ent * ent_loss
+
+                self.scaler.scale(loss).backward()
+                # loss.backward()
+
                 if self._grad_norm is not None:
+                    self.scaler.unscale_(self.optim)
                     nn.utils.clip_grad_norm_(
                         list(self.actor.parameters()) + list(self.critic.parameters()),
                         max_norm=self._grad_norm,
                     )
-                self.optim.step()
+
+                self.scaler.step(self.optim)
+                self.scaler.update()
+                # self.optim.step()
                 actor_losses.append(a_loss.item())
                 vf_losses.append(vf_loss.item())
                 ent_losses.append(ent_loss.item())
@@ -141,3 +156,6 @@ class A2CPolicy(PGPolicy):
             "loss/vf": vf_losses,
             "loss/ent": ent_losses,
         }
+
+    def act(self, *args, **kwargs):
+        return self.forward(*args, **kwargs)
