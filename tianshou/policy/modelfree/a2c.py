@@ -3,9 +3,12 @@ import numpy as np
 from torch import nn
 import torch.nn.functional as F
 from typing import Any, Dict, List, Type, Optional
+from torch.cuda.amp import autocast
 
 from tianshou.policy import PGPolicy
 from tianshou.data import Batch, ReplayBuffer, to_torch_as
+
+# from pytorch_forecasting import QuantileLoss
 
 
 class A2CPolicy(PGPolicy):
@@ -50,8 +53,8 @@ class A2CPolicy(PGPolicy):
         self,
         actor: torch.nn.Module,
         critic: torch.nn.Module,
-        optim: torch.optim.Optimizer,
-        dist_fn: Type[torch.distributions.Distribution],
+        optim: torch.optim.Optimizer = None,
+        dist_fn: Type[torch.distributions.Distribution] = None,
         vf_coef: float = 0.5,
         ent_coef: float = 0.01,
         max_grad_norm: Optional[float] = None,
@@ -79,13 +82,19 @@ class A2CPolicy(PGPolicy):
         self, batch: Batch, buffer: ReplayBuffer, indice: np.ndarray
     ) -> Batch:
         v_s, v_s_ = [], []
-        with torch.no_grad():
-            for b in batch.split(self._batch, shuffle=False, merge_last=True):
-                v_s.append(self.critic(b.obs))
-                v_s_.append(self.critic(b.obs_next))
+        with autocast(enabled=self.use_mixed):  # We should do this in fp16 as well
+            with torch.no_grad():
+                for b in batch.split(self._batch, shuffle=False, merge_last=True):
+                    v_s.append(self.critic(b.obs))
+                    v_s_.append(self.critic(b.obs_next))
         batch.v_s = torch.cat(v_s, dim=0).flatten()  # old value
-        v_s = batch.v_s.cpu().numpy()
-        v_s_ = torch.cat(v_s_, dim=0).flatten().cpu().numpy()
+        if self.use_mixed:
+            v_s = batch.v_s.float().cpu().numpy()
+            v_s_ = torch.cat(v_s_, dim=0).flatten().float().cpu().numpy()
+        else:
+            v_s = batch.v_s.cpu().numpy()
+            v_s_ = torch.cat(v_s_, dim=0).flatten().cpu().numpy()
+
         # when normalizing values, we do not minus self.ret_rms.mean to be numerically
         # consistent with OPENAI baselines' value normalization pipeline. Emperical
         # study also shows that "minus mean" will harm performances a tiny little bit
@@ -112,24 +121,33 @@ class A2CPolicy(PGPolicy):
         losses, actor_losses, vf_losses, ent_losses = [], [], [], []
         for _ in range(repeat):
             for b in batch.split(batch_size, merge_last=True):
-                # calculate loss for actor
-                dist = self(b).dist
-                log_prob = dist.log_prob(b.act).reshape(len(b.adv), -1).transpose(0, 1)
-                actor_loss = -(log_prob * b.adv).mean()
-                # calculate loss for critic
-                value = self.critic(b.obs).flatten()
-                vf_loss = F.mse_loss(b.returns, value)
-                # calculate regularization and overall loss
-                ent_loss = dist.entropy().mean()
-                loss = actor_loss + self._weight_vf * vf_loss \
-                    - self._weight_ent * ent_loss
                 self.optim.zero_grad()
-                loss.backward()
+                with autocast(enabled=self.use_mixed):
+                    # calculate loss for actor
+                    dist = self(b).dist
+                    log_prob = dist.log_prob(b.act).reshape(len(b.adv), -1).transpose(0, 1)
+                    actor_loss = -(log_prob * b.adv).mean()
+                    # calculate loss for critic
+                    value = self.critic(b.obs).flatten()
+                    vf_loss = F.mse_loss(b.returns, value)
+                    # vf_loss = F.smooth_l1_loss(b.returns, value)     # Experiment
+                    # calculate regularization and overall loss
+                    ent_loss = dist.entropy().mean()
+                    loss = actor_loss + self._weight_vf * vf_loss \
+                        - self._weight_ent * ent_loss
+                
+                self.scaler.scale(loss).backward()
+                # loss.backward()
+
                 if self._grad_norm:  # clip large gradient
+                    self.scaler.unscale_(self.optim)
                     nn.utils.clip_grad_norm_(
                         list(self.actor.parameters()) + list(self.critic.parameters()),
                         max_norm=self._grad_norm)
-                self.optim.step()
+
+                self.scaler.step(self.optim)
+                self.scaler.update()
+                # self.optim.step()
                 actor_losses.append(actor_loss.item())
                 vf_losses.append(vf_loss.item())
                 ent_losses.append(ent_loss.item())
@@ -144,3 +162,6 @@ class A2CPolicy(PGPolicy):
             "loss/vf": vf_losses,
             "loss/ent": ent_losses,
         }
+
+    def act(self, *args, **kwargs):
+        return self.forward(*args, **kwargs)

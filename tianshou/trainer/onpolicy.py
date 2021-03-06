@@ -29,6 +29,7 @@ def onpolicy_trainer(
     logger: BaseLogger = LazyLogger(),
     verbose: bool = True,
     test_in_train: bool = True,
+    backup_save_freq: int = 0,  # mid save freq for cloud training, 0 is disabled
 ) -> Dict[str, Union[float, str]]:
     """A wrapper for on-policy trainer procedure.
 
@@ -88,10 +89,14 @@ def onpolicy_trainer(
     train_collector.reset_stat()
     test_collector.reset_stat()
     test_in_train = test_in_train and train_collector.policy == policy
-    test_result = test_episode(policy, test_collector, test_fn, 0, episode_per_test,
-                               logger, env_step, reward_metric)
+    
+    # # Disable test in the beginning
+    # test_result = test_episode(policy, test_collector, test_fn, 0, episode_per_test,
+    #                            logger, env_step, reward_metric)    
+    # best_reward, best_reward_std = test_result["rew"], test_result["rew_std"]
+    best_reward, best_reward_std = 0, 0
+    
     best_epoch = 0
-    best_reward, best_reward_std = test_result["rew"], test_result["rew_std"]
     for epoch in range(1, 1 + max_epoch):
         # train
         policy.train()
@@ -144,6 +149,9 @@ def onpolicy_trainer(
                     data[k] = f"{losses[k]:.3f}"
                 logger.log_update_data(losses, gradient_step)
                 t.set_postfix(**data)
+                if backup_save_freq:    # it has to be dividable by 'n/st'
+                    if t.n % backup_save_freq == 0 and t.n != 0:
+                        save_fn(policy, add='_midsave')  # Dev: backup saves for cloud training
             if t.n <= t.total:
                 t.update()
         # test
@@ -155,6 +163,10 @@ def onpolicy_trainer(
             best_epoch = epoch
             if save_fn:
                 save_fn(policy)
+        try:
+            save_fn(policy, add='_last')  # Dev: save every episode
+        except:
+            print("Save func doesn't support additional kwargs")
         if verbose:
             print(
                 f"Epoch #{epoch}: test_reward: {rew:.6f} ± {rew_std:.6f}, best_reward:"

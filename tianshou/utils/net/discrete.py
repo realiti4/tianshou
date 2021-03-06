@@ -35,7 +35,7 @@ class Actor(nn.Module):
 
     def __init__(
         self,
-        preprocess_net: nn.Module,
+        preprocess_net: nn.Module,      # bu bizim dilated net
         action_shape: Sequence[int],
         hidden_sizes: Sequence[int] = (),
         softmax_output: bool = True,
@@ -59,9 +59,9 @@ class Actor(nn.Module):
         info: Dict[str, Any] = {},
     ) -> Tuple[torch.Tensor, Any]:
         r"""Mapping: s -> Q(s, \*)."""
-        logits, h = self.preprocess(s, state)
-        logits = self.last(logits)
-        if self.softmax_output:
+        logits, h = self.preprocess(s, state)   # this is dilated net
+        logits = self.last(logits)      # This is linear
+        if self.softmax_output:         # This is True
             logits = F.softmax(logits, dim=-1)
         return logits, h
 

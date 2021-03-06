@@ -197,7 +197,7 @@ class ReplayBuffer:
         """
         # preprocess batch
         b = Batch()
-        for key in set(self._reserved_keys).intersection(batch.keys()):
+        for key in set(self._reserved_keys).intersection(batch.keys()):     # change order and copy?
             b.__dict__[key] = batch[key]
         batch = b
         assert set(["obs", "act", "rew", "done"]).issubset(batch.keys())
@@ -214,14 +214,14 @@ class ReplayBuffer:
             )
         # get ptr
         if stacked_batch:
-            rew, done = batch.rew[0], batch.done[0]
+            rew, done = batch.rew[0], batch.done[0]     # int, boolean
         else:
             rew, done = batch.rew, batch.done
-        ptr, ep_rew, ep_len, ep_idx = list(
+        ptr, ep_rew, ep_len, ep_idx = list(         # what are these?
             map(lambda x: np.array([x]), self._add_index(rew, done))
         )
         try:
-            self._meta[ptr] = batch
+            self._meta[ptr] = batch     # self._meta is our buffer?
         except ValueError:
             stack = not stacked_batch
             batch.rew = batch.rew.astype(float)

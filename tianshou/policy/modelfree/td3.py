@@ -7,6 +7,8 @@ from tianshou.policy import DDPGPolicy
 from tianshou.data import Batch, ReplayBuffer
 from tianshou.exploration import BaseNoise, GaussianNoise
 
+from torch.cuda.amp import autocast
+
 
 class TD3Policy(DDPGPolicy):
     """Implementation of TD3, arXiv:1802.09477.
@@ -110,19 +112,22 @@ class TD3Policy(DDPGPolicy):
     def learn(self, batch: Batch, **kwargs: Any) -> Dict[str, float]:
         # critic 1&2
         td1, critic1_loss = self._mse_optimizer(
-            batch, self.critic1, self.critic1_optim)
+            batch, self.critic1, self.critic1_optim, self.scaler, self.use_mixed)
         td2, critic2_loss = self._mse_optimizer(
-            batch, self.critic2, self.critic2_optim)
+            batch, self.critic2, self.critic2_optim, self.scaler, self.use_mixed)
         batch.weight = (td1 + td2) / 2.0  # prio-buffer
 
         # actor
         if self._cnt % self._freq == 0:
             actor_loss = -self.critic1(batch.obs, self(batch, eps=0.0).act).mean()
             self.actor_optim.zero_grad()
-            actor_loss.backward()
+            self.scaler.scale(actor_loss).backward()
+            # actor_loss.backward()
             self._last = actor_loss.item()
-            self.actor_optim.step()
+            self.scaler.step(self.actor_optim)
+            # self.actor_optim.step()
             self.sync_weight()
+        self.scaler.update()    # Check this if this is correct, with sync_weight above as well
         self._cnt += 1
         return {
             "loss/actor": self._last,

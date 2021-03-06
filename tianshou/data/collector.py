@@ -17,6 +17,7 @@ from tianshou.data import (
     to_numpy,
 )
 
+from torch.cuda.amp import autocast
 
 class Collector(object):
     """Collector enables the policy to interact with different types of envs with \
@@ -196,23 +197,24 @@ class Collector(object):
         while True:
             assert len(self.data) == len(ready_env_ids)
             # restore the state: if the last state is None, it won't store
-            last_state = self.data.policy.pop("hidden_state", None)
+            last_state = self.data.policy.pop("hidden_state", None)     # What is this??
 
             # get the next action
             if random:
                 self.data.update(
                     act=[self._action_space[i].sample() for i in ready_env_ids])
             else:
-                if no_grad:
-                    with torch.no_grad():  # faster than retain_grad version
-                        # self.data.obs will be used by agent to get result
+                with autocast(enabled=self.policy.use_mixed):    # Try also using mixed precision here
+                    if no_grad:
+                        with torch.no_grad():  # faster than retain_grad version
+                            # self.data.obs will be used by agent to get result
+                            result = self.policy(self.data, last_state)
+                    else:
                         result = self.policy(self.data, last_state)
-                else:
-                    result = self.policy(self.data, last_state)
                 # update state / act / policy into self.data
-                policy = result.get("policy", Batch())
+                policy = result.get("policy", Batch())      # how is this getting? = Batch()
                 assert isinstance(policy, Batch)
-                state = result.get("state", None)
+                state = result.get("state", None)           # None
                 if state is not None:
                     policy.hidden_state = state  # save state into buffer
                 act = to_numpy(result.act)
@@ -398,12 +400,13 @@ class AsyncCollector(Collector):
                 self.data.update(
                     act=[self._action_space[i].sample() for i in ready_env_ids])
             else:
-                if no_grad:
-                    with torch.no_grad():  # faster than retain_grad version
-                        # self.data.obs will be used by agent to get result
+                with autocast(enabled=self.policy.use_mixed):
+                    if no_grad:
+                        with torch.no_grad():  # faster than retain_grad version
+                            # self.data.obs will be used by agent to get result
+                            result = self.policy(self.data, last_state)
+                    else:
                         result = self.policy(self.data, last_state)
-                else:
-                    result = self.policy(self.data, last_state)
                 # update state / act / policy into self.data
                 policy = result.get("policy", Batch())
                 assert isinstance(policy, Batch)

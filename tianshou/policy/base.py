@@ -2,6 +2,8 @@ import gym
 import torch
 import numpy as np
 from torch import nn
+from torch.cuda.amp import GradScaler
+from torch.cuda.amp import autocast
 from numba import njit
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Tuple, Union, Optional, Callable
@@ -62,6 +64,7 @@ class BasePolicy(ABC, nn.Module):
         action_space: Optional[gym.Space] = None,
         action_scaling: bool = False,
         action_bound_method: str = "",
+        use_mixed: bool = False,
     ) -> None:
         super().__init__()
         self.observation_space = observation_space
@@ -73,6 +76,9 @@ class BasePolicy(ABC, nn.Module):
         assert action_bound_method in ("", "clip", "tanh")
         self.action_bound_method = action_bound_method
         self._compile()
+
+        self.use_mixed = use_mixed
+        self.scaler = GradScaler(enabled=self.use_mixed)
 
     def set_agent_id(self, agent_id: int) -> None:
         """Set self.agent_id = agent_id, for MARL."""
@@ -229,7 +235,7 @@ class BasePolicy(ABC, nn.Module):
         """
         if buffer is None:
             return {}
-        batch, indice = buffer.sample(sample_size)
+        batch, indice = buffer.sample(sample_size)      # doesn't sample 0 ones
         self.updating = True
         batch = self.process_fn(batch, buffer, indice)
         result = self.learn(batch, **kwargs)
@@ -315,6 +321,7 @@ class BasePolicy(ABC, nn.Module):
         gamma: float = 0.99,
         n_step: int = 1,
         rew_norm: bool = False,
+        use_mixed: bool = False,
     ) -> Batch:
         r"""Compute n-step return for Q-learning targets.
 
@@ -348,9 +355,10 @@ class BasePolicy(ABC, nn.Module):
         # terminal indicates buffer indexes nstep after 'indice',
         # and are truncated at the end of each episode
         terminal = indices[-1]
-        with torch.no_grad():
-            target_q_torch = target_q_fn(buffer, terminal)  # (bsz, ?)
-        target_q = to_numpy(target_q_torch.reshape(bsz, -1))
+        with autocast(enabled=use_mixed):
+            with torch.no_grad():
+                target_q_torch = target_q_fn(buffer, terminal)  # (bsz, ?)
+        target_q = to_numpy(target_q_torch.float().reshape(bsz, -1))
         target_q = target_q * BasePolicy.value_mask(buffer, terminal).reshape(-1, 1)
         end_flag = buffer.done.copy()
         end_flag[buffer.unfinished_index()] = True

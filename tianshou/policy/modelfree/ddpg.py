@@ -8,6 +8,8 @@ from tianshou.policy import BasePolicy
 from tianshou.exploration import BaseNoise, GaussianNoise
 from tianshou.data import Batch, ReplayBuffer
 
+from torch.cuda.amp import autocast
+
 
 class DDPGPolicy(BasePolicy):
     """Implementation of Deep Deterministic Policy Gradient. arXiv:1509.02971.
@@ -78,6 +80,7 @@ class DDPGPolicy(BasePolicy):
         self._rew_norm = reward_normalization
         self._n_step = estimation_step
 
+
     def set_exp_noise(self, noise: Optional[BaseNoise]) -> None:
         """Set the exploration noise."""
         self._noise = noise
@@ -102,7 +105,8 @@ class DDPGPolicy(BasePolicy):
         batch = buffer[indice]  # batch.obs_next: s_{t+n}
         target_q = self.critic_old(
             batch.obs_next,
-            self(batch, model='actor_old', input='obs_next').act)
+            self(batch, model='actor_old', input='obs_next').act
+            )
         return target_q
 
     def process_fn(
@@ -110,7 +114,7 @@ class DDPGPolicy(BasePolicy):
     ) -> Batch:
         batch = self.compute_nstep_return(
             batch, buffer, indice, self._target_q,
-            self._gamma, self._n_step, self._rew_norm)
+            self._gamma, self._n_step, self._rew_norm, self.use_mixed)
         return batch
 
     def forward(
@@ -140,18 +144,24 @@ class DDPGPolicy(BasePolicy):
 
     @staticmethod
     def _mse_optimizer(
-        batch: Batch, critic: torch.nn.Module, optimizer: torch.optim.Optimizer
+        batch: Batch, critic: torch.nn.Module, optimizer: torch.optim.Optimizer, scaler=None, use_mixed=False,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """A simple wrapper script for updating critic network."""
         weight = getattr(batch, "weight", 1.0)
-        current_q = critic(batch.obs, batch.act).flatten()
-        target_q = batch.returns.flatten()
-        td = current_q - target_q
-        # critic_loss = F.mse_loss(current_q1, target_q)
-        critic_loss = (td.pow(2) * weight).mean()
+        with autocast(enabled=use_mixed):
+            current_q = critic(batch.obs, batch.act).flatten()
+            target_q = batch.returns.flatten()
+            td = current_q - target_q
+            # critic_loss = F.mse_loss(current_q1, target_q)
+            critic_loss = (td.pow(2) * weight).mean()
         optimizer.zero_grad()
-        critic_loss.backward()
-        optimizer.step()
+        if scaler is not None:
+            scaler.scale(critic_loss).backward()
+            scaler.step(optimizer)
+            # scaler.update()
+        else:
+            critic_loss.backward()
+            optimizer.step()
         return td, critic_loss
 
     def learn(self, batch: Batch, **kwargs: Any) -> Dict[str, float]:
