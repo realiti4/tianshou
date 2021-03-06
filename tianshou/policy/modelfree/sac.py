@@ -8,6 +8,9 @@ from tianshou.policy import DDPGPolicy
 from tianshou.exploration import BaseNoise
 from tianshou.data import Batch, ReplayBuffer, to_torch_as
 
+from torch.cuda.amp import autocast
+from torch.cuda.amp import GradScaler
+
 
 class SACPolicy(DDPGPolicy):
     """Implementation of Soft Actor-Critic. arXiv:1812.05905.
@@ -87,7 +90,8 @@ class SACPolicy(DDPGPolicy):
             self._alpha = alpha
 
         self._deterministic_eval = deterministic_eval
-        self.__eps = np.finfo(np.float32).eps.item()
+        self.__eps = np.finfo(np.float32).eps.item()        
+        
 
     def train(self, mode: bool = True) -> "SACPolicy":
         self.training = mode
@@ -144,23 +148,29 @@ class SACPolicy(DDPGPolicy):
         return target_q
 
     def learn(self, batch: Batch, **kwargs: Any) -> Dict[str, float]:
+        
         # critic 1&2
         td1, critic1_loss = self._mse_optimizer(
-            batch, self.critic1, self.critic1_optim)
+            batch, self.critic1, self.critic1_optim, None, False)
         td2, critic2_loss = self._mse_optimizer(
-            batch, self.critic2, self.critic2_optim)
+            batch, self.critic2, self.critic2_optim, None, False)
         batch.weight = (td1 + td2) / 2.0  # prio-buffer
-
-        # actor
-        obs_result = self(batch)
-        a = obs_result.act
-        current_q1a = self.critic1(batch.obs, a).flatten()
-        current_q2a = self.critic2(batch.obs, a).flatten()
-        actor_loss = (self._alpha * obs_result.log_prob.flatten()
-                      - torch.min(current_q1a, current_q2a)).mean()
+        
+        with autocast(enabled=self.use_mixed):
+            # actor
+            obs_result = self(batch)
+            a = obs_result.act
+            current_q1a = self.critic1(batch.obs, a).flatten()
+            current_q2a = self.critic2(batch.obs, a).flatten()
+            actor_loss = (self._alpha * obs_result.log_prob.flatten()
+                        - torch.min(current_q1a, current_q2a)).mean()
+        
         self.actor_optim.zero_grad()
-        actor_loss.backward()
-        self.actor_optim.step()
+        self.scaler.scale(actor_loss).backward()
+        self.scaler.step(self.actor_optim)
+        self.scaler.update()
+        # actor_loss.backward()
+        # self.actor_optim.step()
 
         if self._is_auto_alpha:
             log_prob = obs_result.log_prob.detach() + self._target_entropy

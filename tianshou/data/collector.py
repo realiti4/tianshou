@@ -196,7 +196,7 @@ class Collector(object):
         while True:
             assert len(self.data) == len(ready_env_ids)
             # restore the state: if the last state is None, it won't store
-            last_state = self.data.policy.pop("hidden_state", None)
+            last_state = self.data.policy.pop("hidden_state", None)     # What is this??
 
             # get the next action
             if random:
@@ -210,9 +210,9 @@ class Collector(object):
                 else:
                     result = self.policy(self.data, last_state)
                 # update state / act / policy into self.data
-                policy = result.get("policy", Batch())
+                policy = result.get("policy", Batch())      # how is this getting? = Batch()
                 assert isinstance(policy, Batch)
-                state = result.get("state", None)
+                state = result.get("state", None)           # None
                 if state is not None:
                     policy.hidden_state = state  # save state into buffer
                 act = to_numpy(result.act)

@@ -107,10 +107,26 @@ class Critic(nn.Module):
         a: Optional[Union[np.ndarray, torch.Tensor]] = None,
         info: Dict[str, Any] = {},
     ) -> torch.Tensor:
-        """Mapping: (s, a) -> logits -> Q(s, a)."""
+        """Mapping: (s, a) -> logits -> Q(s, a)."""       
+
+        # # New - Fix input for custom cnn
+        # s = torch.as_tensor(
+        #     s, device=self.device, dtype=torch.float32  # type: ignore
+        # )        
+        # if a is not None:
+        #     a = torch.as_tensor(
+        #         a, device=self.device, dtype=torch.float32  # type: ignore
+        #     ).flatten(1)
+        #     a = a.repeat(1, 720).unsqueeze(2)
+        #     s = torch.cat([s, a], dim=2)
+
+        # Org one
         s = torch.as_tensor(
             s, device=self.device, dtype=torch.float32  # type: ignore
-        ).flatten(1)
+        )
+
+        s = s.flatten(1)
+
         if a is not None:
             a = torch.as_tensor(
                 a, device=self.device, dtype=torch.float32  # type: ignore

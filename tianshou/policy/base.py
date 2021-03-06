@@ -229,7 +229,7 @@ class BasePolicy(ABC, nn.Module):
         """
         if buffer is None:
             return {}
-        batch, indice = buffer.sample(sample_size)
+        batch, indice = buffer.sample(sample_size)      # doesn't sample 0 ones
         self.updating = True
         batch = self.process_fn(batch, buffer, indice)
         result = self.learn(batch, **kwargs)
