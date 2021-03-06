@@ -94,7 +94,8 @@ class DDPGPolicy(BasePolicy):
         batch = buffer[indice]  # batch.obs_next: s_{t+n}
         target_q = self.critic_old(
             batch.obs_next,
-            self(batch, model='actor_old', input='obs_next').act)
+            self(batch, model='actor_old', input='obs_next').act
+            )
         return target_q
 
     def process_fn(
