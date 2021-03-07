@@ -54,6 +54,7 @@ class A2CPolicy(PGPolicy):
         gae_lambda: float = 0.95,
         reward_normalization: bool = False,
         max_batchsize: int = 256,
+        used_mixed=False,
         **kwargs: Any
     ) -> None:
         super().__init__(None, optim, dist_fn, discount_factor, **kwargs)
@@ -67,7 +68,8 @@ class A2CPolicy(PGPolicy):
         self._batch = max_batchsize
         self._rew_norm = reward_normalization
 
-        self.scaler = GradScaler()
+        self.used_mixed = used_mixed
+        self.scaler = GradScaler(enabled=self.used_mixed)
 
     def process_fn(
         self, batch: Batch, buffer: ReplayBuffer, indice: np.ndarray
@@ -120,7 +122,7 @@ class A2CPolicy(PGPolicy):
         for _ in range(repeat):
             for b in batch.split(batch_size, merge_last=True):
                 self.optim.zero_grad()
-                with autocast():
+                with autocast(enabled=self.used_mixed):
                     dist = self(b).dist
                     v = self.critic(b.obs).flatten()
                     a = to_torch_as(b.act, v)
@@ -132,7 +134,7 @@ class A2CPolicy(PGPolicy):
                     loss = a_loss + self._weight_vf * vf_loss - self._weight_ent * ent_loss
 
                 self.scaler.scale(loss).backward()
-                # loss.backward()                
+                # loss.backward()
 
                 if self._grad_norm is not None:
                     self.scaler.unscale_(self.optim)

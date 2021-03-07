@@ -82,10 +82,15 @@ def offpolicy_trainer(
     train_collector.reset_stat()
     test_collector.reset_stat()
     test_in_train = test_in_train and train_collector.policy == policy
-    test_result = test_episode(policy, test_collector, test_fn, 0, episode_per_test,
-                               logger, env_step, reward_metric)
     best_epoch = 0
-    best_reward, best_reward_std = test_result["rew"], test_result["rew_std"]
+
+    # # Disable test before training
+    # test_result = test_episode(policy, test_collector, test_fn, 0, episode_per_test,
+    #                            logger, env_step, reward_metric)
+    
+    # best_reward, best_reward_std = test_result["rew"], test_result["rew_std"]
+    # best_reward, best_reward_std = 0, 0
+
     for epoch in range(1, 1 + max_epoch):
         # train
         policy.train()

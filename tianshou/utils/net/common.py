@@ -207,7 +207,7 @@ class Net(nn.Module):
         self.use_dueling = dueling_param is not None
         output_dim = action_dim if not self.use_dueling and not concat else 0
 
-        # Custom models
+        # # Custom models
         # self.model = MLP(input_dim, output_dim, hidden_sizes,
         #                  norm_layer, activation, device)
         self.model = custom1(input_dim, output_dim, hidden_sizes,
