@@ -138,7 +138,7 @@ class custom1(nn.Module):
             x, device=self.device, dtype=torch.float32)  # type: ignore
         x = x.permute(0, 2, 1)
 
-        return self.block1(x)        
+        return self.block1(x)        # [1, 6, 720]
 
 
 class Net(nn.Module):
