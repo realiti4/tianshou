@@ -196,6 +196,7 @@ class Net(nn.Module):
         concat: bool = False,
         num_atoms: int = 1,
         dueling_param: Optional[Tuple[Dict[str, Any], Dict[str, Any]]] = None,
+        custom_model = None,
     ) -> None:
         super().__init__()
         self.device = device
@@ -209,10 +210,13 @@ class Net(nn.Module):
         output_dim = action_dim if not self.use_dueling and not concat else 0
         
         # Custom models
-        # self.model = MLP(input_dim, output_dim, hidden_sizes,
-        #                  norm_layer, activation, device)
-        self.model = custom1(input_dim, output_dim, hidden_sizes,
-                         norm_layer, activation, device)                   
+        if custom_model is None:
+            self.model = MLP(input_dim, output_dim, hidden_sizes,
+                            norm_layer, activation, device)
+        else:
+            input_dim = state_shape[1]
+            self.model = custom_model(input_dim, output_dim, hidden_sizes,
+                            norm_layer, activation, device)
         
         
         self.output_dim = self.model.output_dim
