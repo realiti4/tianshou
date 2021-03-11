@@ -92,54 +92,6 @@ class MLP(nn.Module):
             x, device=self.device, dtype=torch.float32)  # type: ignore
         return self.model(x.flatten(1))     # Output [1, 128]
 
-class custom1(nn.Module):
-    def __init__(
-        self,
-        input_dim: int,
-        output_dim: int = 0,
-        hidden_sizes: Sequence[int] = (),
-        norm_layer: Optional[Union[ModuleType, Sequence[ModuleType]]] = None,
-        activation: Optional[Union[ModuleType, Sequence[ModuleType]]]
-        = nn.ReLU,
-        device: Optional[Union[str, int, torch.device]] = None,
-    ) -> None:
-        super().__init__()
-        self.device = device
-        hidden_size = 1024
-        input_dim = 6
-
-        self.block1 = nn.Sequential(
-            nn.Conv1d(input_dim, hidden_size, kernel_size=8, dilation=2, stride=2),
-            nn.BatchNorm1d(hidden_size),
-            nn.ReLU(),
-            
-            nn.Conv1d(hidden_size, hidden_size, kernel_size=5, dilation=4, stride=2),
-            nn.BatchNorm1d(hidden_size),
-            nn.ReLU(),
-
-            nn.Conv1d(hidden_size, hidden_size, kernel_size=3, dilation=2),
-            nn.BatchNorm1d(hidden_size),
-            nn.ReLU(),
-
-            nn.Conv1d(hidden_size, hidden_size, kernel_size=3, dilation=2),
-            nn.BatchNorm1d(hidden_size),
-            nn.ReLU(),
-
-            nn.Conv1d(hidden_size, input_dim, kernel_size=1),
-            nn.AvgPool1d(3, padding=1, stride=2),
-        )
-
-        self.output_dim = 486
-
-    def forward(
-        self, x: Union[np.ndarray, torch.Tensor]        # x = [1, 720, 6]
-    ) -> torch.Tensor:
-        x = torch.as_tensor(
-            x, device=self.device, dtype=torch.float32)  # type: ignore
-        x = x.permute(0, 2, 1)
-
-        return self.block1(x)        # [1, 6, 720]
-
 
 class Net(nn.Module):
     """Wrapper of MLP to support more specific DRL usage.
@@ -197,6 +149,7 @@ class Net(nn.Module):
         num_atoms: int = 1,
         dueling_param: Optional[Tuple[Dict[str, Any], Dict[str, Any]]] = None,
         custom_model = None,
+        custom_output_dim = None,
     ) -> None:
         super().__init__()
         self.device = device
@@ -214,8 +167,9 @@ class Net(nn.Module):
             self.model = MLP(input_dim, output_dim, hidden_sizes,
                             norm_layer, activation, device)
         else:
+            assert custom_output_dim is not None, 'pass output_dim for dilated cnn'
             input_dim = state_shape[1]
-            self.model = custom_model(input_dim, output_dim, hidden_sizes,
+            self.model = custom_model(input_dim, custom_output_dim, hidden_sizes,
                             norm_layer, activation, device)
         
         
