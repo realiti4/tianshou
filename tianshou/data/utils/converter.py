@@ -42,13 +42,16 @@ def to_torch(
              torch.Tensor],
     dtype: Optional[torch.dtype] = None,
     device: Union[str, int, torch.device] = "cpu",
+    use_mixed: bool = False,
 ) -> Union[Batch, dict, list, tuple, torch.Tensor]:
     """Return an object without np.ndarray."""
     if isinstance(x, np.ndarray) and issubclass(
         x.dtype.type, (np.bool_, np.number)
     ):  # most often case
         x = torch.from_numpy(x).to(device)  # type: ignore
-        if dtype is not None:
+        if use_mixed:
+            x = x.type(torch.float32)
+        elif dtype is not None:
             x = x.type(dtype)
         return x
     elif isinstance(x, torch.Tensor):  # second often case
@@ -75,13 +78,14 @@ def to_torch(
 def to_torch_as(
     x: Union[Batch, dict, list, tuple, np.ndarray, torch.Tensor],
     y: torch.Tensor,
+    use_mixed: bool = False,
 ) -> Union[Batch, dict, list, tuple, torch.Tensor]:
     """Return an object without np.ndarray.
 
     Same as ``to_torch(x, dtype=y.dtype, device=y.device)``.
     """
     assert isinstance(y, torch.Tensor)
-    return to_torch(x, dtype=y.dtype, device=y.device)
+    return to_torch(x, dtype=y.dtype, device=y.device, use_mixed=use_mixed)
 
 
 # Note: object is used as a proxy for objects that can be pickled
