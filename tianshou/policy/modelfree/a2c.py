@@ -59,7 +59,7 @@ class A2CPolicy(PGPolicy):
         max_grad_norm: Optional[float] = None,
         gae_lambda: float = 0.95,
         max_batchsize: int = 256,
-        used_mixed=False,
+        use_mixed=False,
         **kwargs: Any
     ) -> None:
         super().__init__(actor, optim, dist_fn, **kwargs)
@@ -71,8 +71,8 @@ class A2CPolicy(PGPolicy):
         self._grad_norm = max_grad_norm
         self._batch = max_batchsize
 
-        self.used_mixed = used_mixed
-        self.scaler = GradScaler(enabled=self.used_mixed)
+        self.use_mixed = use_mixed
+        self.scaler = GradScaler(enabled=self.use_mixed)
 
     def process_fn(
         self, batch: Batch, buffer: ReplayBuffer, indice: np.ndarray
@@ -140,11 +140,13 @@ class A2CPolicy(PGPolicy):
                 actor_losses.append(actor_loss.item())
 =======
                 self.optim.zero_grad()
-                with autocast(enabled=self.used_mixed):
+                with autocast(enabled=self.use_mixed):
                     dist = self(b).dist
                     v = self.critic(b.obs).flatten()
-                    a = to_torch_as(b.act, v)
-                    r = to_torch_as(b.returns, v)
+                    # Org - disabled for mixed precision, don't need to force these
+                    # Returns forced torch.float32 if mixed precision is enabled
+                    a = to_torch_as(b.act, v, self.use_mixed)
+                    r = to_torch_as(b.returns, v, self.use_mixed)
                     log_prob = dist.log_prob(a).reshape(len(r), -1).transpose(0, 1)
                     a_loss = -(log_prob * (r - v).detach()).mean()
                     vf_loss = F.mse_loss(r, v)  # type: ignore

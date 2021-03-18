@@ -86,8 +86,9 @@ class MLP(nn.Module):
     def forward(
         self, x: Union[np.ndarray, torch.Tensor]
     ) -> torch.Tensor:
-        x = torch.as_tensor(
-            x, device=self.device, dtype=torch.float32)  # type: ignore
+        if not isinstance(x, torch.Tensor): # Don't convert fp16 to fp32 when mixed enabled
+            x = torch.as_tensor(
+                x, device=self.device, dtype=torch.float32)  # type: ignore
         return self.model(x.flatten(1))
 
 
