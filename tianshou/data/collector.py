@@ -17,6 +17,7 @@ from tianshou.data import (
     to_numpy,
 )
 
+from torch.cuda.amp import autocast
 
 class Collector(object):
     """Collector enables the policy to interact with different types of envs with \
@@ -203,6 +204,7 @@ class Collector(object):
                 self.data.update(
                     act=[self._action_space[i].sample() for i in ready_env_ids])
             else:
+                # with autocast(enabled=True):    # Try also using mixed precision here
                 if no_grad:
                     with torch.no_grad():  # faster than retain_grad version
                         # self.data.obs will be used by agent to get result
