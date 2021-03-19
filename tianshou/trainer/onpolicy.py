@@ -159,6 +159,7 @@ def onpolicy_trainer(
             best_epoch = epoch
             if save_fn:
                 save_fn(policy)
+        save_fn(policy, add='_last')  # Dev: save every episode
         if verbose:
             print(
                 f"Epoch #{epoch}: test_reward: {rew:.6f} ± {rew_std:.6f}, best_reward:"
