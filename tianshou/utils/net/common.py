@@ -148,7 +148,7 @@ class Net(nn.Module):
         num_atoms: int = 1,
         dueling_param: Optional[Tuple[Dict[str, Any], Dict[str, Any]]] = None,
         custom_model = None,
-        custom_output_dim = None,
+        custom_model_kwargs: dict = None,
     ) -> None:
         super().__init__()
         self.device = device
@@ -166,12 +166,12 @@ class Net(nn.Module):
             self.model = MLP(input_dim, output_dim, hidden_sizes,
                             norm_layer, activation, device)
         else:
-            assert custom_output_dim is not None, 'pass output_dim for dilated cnn'
+            assert custom_model_kwargs is not None, 'pass output_dim for dilated cnn'
             input_dim = state_shape[1]
             if concat:
                 input_dim += action_dim
-            self.model = custom_model(input_dim, custom_output_dim, hidden_sizes,
-                            norm_layer, activation, device)
+            self.model = custom_model(input_dim=input_dim, hidden_sizes=hidden_sizes,
+                            norm_layer=norm_layer, activation=activation, device=device, **custom_model_kwargs)
 
         self.output_dim = self.model.output_dim
         if self.use_dueling:  # dueling DQN
