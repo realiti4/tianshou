@@ -55,7 +55,9 @@ def to_torch(
             x = x.type(dtype)
         return x
     elif isinstance(x, torch.Tensor):  # second often case
-        if dtype is not None:
+        if use_mixed:
+            x = x.type(torch.float32)
+        elif dtype is not None:
             x = x.type(dtype)
         return x.to(device)  # type: ignore
     elif isinstance(x, (np.number, np.bool_, Number)):
