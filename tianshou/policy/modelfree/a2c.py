@@ -118,56 +118,33 @@ class A2CPolicy(PGPolicy):
         losses, actor_losses, vf_losses, ent_losses = [], [], [], []
         for _ in range(repeat):
             for b in batch.split(batch_size, merge_last=True):
-<<<<<<< HEAD
-                # calculate loss for actor
-                dist = self(b).dist
-                log_prob = dist.log_prob(b.act).reshape(len(b.adv), -1).transpose(0, 1)
-                actor_loss = -(log_prob * b.adv).mean()
-                # calculate loss for critic
-                value = self.critic(b.obs).flatten()
-                vf_loss = F.mse_loss(b.returns, value)
-                # calculate regularization and overall loss
-                ent_loss = dist.entropy().mean()
-                loss = actor_loss + self._weight_vf * vf_loss \
-                    - self._weight_ent * ent_loss
-                self.optim.zero_grad()
-                loss.backward()
-                if self._grad_norm:  # clip large gradient
-                    nn.utils.clip_grad_norm_(
-                        list(self.actor.parameters()) + list(self.critic.parameters()),
-                        max_norm=self._grad_norm)
-                self.optim.step()
-                actor_losses.append(actor_loss.item())
-=======
                 self.optim.zero_grad()
                 with autocast(enabled=self.use_mixed):
+                    # calculate loss for actor
                     dist = self(b).dist
-                    v = self.critic(b.obs).flatten()
-                    # Org - disabled for mixed precision, don't need to force these
-                    # Returns forced torch.float32 if mixed precision is enabled
-                    a = to_torch_as(b.act, v, self.use_mixed)
-                    r = to_torch_as(b.returns, v, self.use_mixed)
-                    log_prob = dist.log_prob(a).reshape(len(r), -1).transpose(0, 1)
-                    a_loss = -(log_prob * (r - v).detach()).mean()
-                    vf_loss = F.mse_loss(r, v)  # type: ignore
+                    log_prob = dist.log_prob(b.act).reshape(len(b.adv), -1).transpose(0, 1)
+                    actor_loss = -(log_prob * b.adv).mean()
+                    # calculate loss for critic
+                    value = self.critic(b.obs).flatten()
+                    vf_loss = F.mse_loss(b.returns, value)
+                    # calculate regularization and overall loss
                     ent_loss = dist.entropy().mean()
-                    loss = a_loss + self._weight_vf * vf_loss - self._weight_ent * ent_loss
-
+                    loss = actor_loss + self._weight_vf * vf_loss \
+                        - self._weight_ent * ent_loss
+                
                 self.scaler.scale(loss).backward()
                 # loss.backward()
 
-                if self._grad_norm is not None:
+                if self._grad_norm:  # clip large gradient
                     self.scaler.unscale_(self.optim)
                     nn.utils.clip_grad_norm_(
                         list(self.actor.parameters()) + list(self.critic.parameters()),
-                        max_norm=self._grad_norm,
-                    )
+                        max_norm=self._grad_norm)
 
                 self.scaler.step(self.optim)
                 self.scaler.update()
                 # self.optim.step()
-                actor_losses.append(a_loss.item())
->>>>>>> f39948a ( mixed and custom model for sac)
+                actor_losses.append(actor_loss.item())
                 vf_losses.append(vf_loss.item())
                 ent_losses.append(ent_loss.item())
                 losses.append(loss.item())

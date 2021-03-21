@@ -2,9 +2,11 @@ import torch
 import numpy as np
 from torch import nn
 from typing import Any, Dict, List, Type, Optional
-
 from tianshou.policy import A2CPolicy
 from tianshou.data import Batch, ReplayBuffer, to_torch_as
+
+from torch.cuda.amp import autocast
+from torch.cuda.amp import GradScaler
 
 
 class PPOPolicy(A2CPolicy):
@@ -67,6 +69,7 @@ class PPOPolicy(A2CPolicy):
         value_clip: bool = False,
         advantage_normalization: bool = True,
         recompute_advantage: bool = False,
+        use_mixed=False,
         **kwargs: Any,
     ) -> None:
         super().__init__(actor, critic, optim, dist_fn, **kwargs)
@@ -80,6 +83,9 @@ class PPOPolicy(A2CPolicy):
                 "value clip is available only when `reward_normalization` is True"
         self._norm_adv = advantage_normalization
         self._recompute_adv = recompute_advantage
+
+        self.use_mixed = use_mixed
+        self.scaler = GradScaler(enabled=self.use_mixed)
 
     def process_fn(
         self, batch: Batch, buffer: ReplayBuffer, indice: np.ndarray
@@ -104,42 +110,49 @@ class PPOPolicy(A2CPolicy):
             if self._recompute_adv and step > 0:
                 batch = self._compute_returns(batch, self._buffer, self._indice)
             for b in batch.split(batch_size, merge_last=True):
-                # calculate loss for actor
-                dist = self(b).dist
-                if self._norm_adv:
-                    mean, std = b.adv.mean(), b.adv.std()
-                    b.adv = (b.adv - mean) / std  # per-batch norm
-                ratio = (dist.log_prob(b.act) - b.logp_old).exp().float()
-                ratio = ratio.reshape(ratio.size(0), -1).transpose(0, 1)
-                surr1 = ratio * b.adv
-                surr2 = ratio.clamp(1.0 - self._eps_clip, 1.0 + self._eps_clip) * b.adv
-                if self._dual_clip:
-                    clip_loss = -torch.max(
-                        torch.min(surr1, surr2), self._dual_clip * b.adv
-                    ).mean()
-                else:
-                    clip_loss = -torch.min(surr1, surr2).mean()
-                # calculate loss for critic
-                value = self.critic(b.obs).flatten()
-                if self._value_clip:
-                    v_clip = b.v_s + (value - b.v_s).clamp(
-                        -self._eps_clip, self._eps_clip)
-                    vf1 = (b.returns - value).pow(2)
-                    vf2 = (b.returns - v_clip).pow(2)
-                    vf_loss = torch.max(vf1, vf2).mean()
-                else:
-                    vf_loss = (b.returns - value).pow(2).mean()
-                # calculate regularization and overall loss
-                ent_loss = dist.entropy().mean()
-                loss = clip_loss + self._weight_vf * vf_loss \
-                    - self._weight_ent * ent_loss
                 self.optim.zero_grad()
-                loss.backward()
+                with autocast(enabled=self.use_mixed):
+                    # calculate loss for actor
+                    dist = self(b).dist
+                    if self._norm_adv:
+                        mean, std = b.adv.mean(), b.adv.std()
+                        b.adv = (b.adv - mean) / std  # per-batch norm
+                    ratio = (dist.log_prob(b.act) - b.logp_old).exp().float()
+                    ratio = ratio.reshape(ratio.size(0), -1).transpose(0, 1)
+                    surr1 = ratio * b.adv
+                    surr2 = ratio.clamp(1.0 - self._eps_clip, 1.0 + self._eps_clip) * b.adv
+                    if self._dual_clip:
+                        clip_loss = -torch.max(
+                            torch.min(surr1, surr2), self._dual_clip * b.adv
+                        ).mean()
+                    else:
+                        clip_loss = -torch.min(surr1, surr2).mean()
+                    # calculate loss for critic
+                    value = self.critic(b.obs).flatten()
+                    if self._value_clip:
+                        v_clip = b.v_s + (value - b.v_s).clamp(
+                            -self._eps_clip, self._eps_clip)
+                        vf1 = (b.returns - value).pow(2)
+                        vf2 = (b.returns - v_clip).pow(2)
+                        vf_loss = torch.max(vf1, vf2).mean()
+                    else:
+                        vf_loss = (b.returns - value).pow(2).mean()
+                    # calculate regularization and overall loss
+                    ent_loss = dist.entropy().mean()
+                    loss = clip_loss + self._weight_vf * vf_loss \
+                        - self._weight_ent * ent_loss
+
+                self.scaler.scale(loss).backward()
+                # loss.backward()
                 if self._grad_norm:  # clip large gradient
+                    self.scaler.unscale_(self.optim)
                     nn.utils.clip_grad_norm_(
                         list(self.actor.parameters()) + list(self.critic.parameters()),
                         max_norm=self._grad_norm)
-                self.optim.step()
+                        
+                self.scaler.step(self.optim)
+                self.scaler.update()
+                # self.optim.step()
                 clip_losses.append(clip_loss.item())
                 vf_losses.append(vf_loss.item())
                 ent_losses.append(ent_loss.item())

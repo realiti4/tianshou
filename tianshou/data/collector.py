@@ -204,7 +204,7 @@ class Collector(object):
                 self.data.update(
                     act=[self._action_space[i].sample() for i in ready_env_ids])
             else:
-                with autocast(enabled=False):    # self.policy.use_mixed - Try also using mixed precision here
+                with autocast(enabled=self.policy.use_mixed):    # Try also using mixed precision here
                     if no_grad:
                         with torch.no_grad():  # faster than retain_grad version
                             # self.data.obs will be used by agent to get result
