@@ -9,6 +9,8 @@ from torch.cuda.amp import GradScaler
 from tianshou.policy import PGPolicy
 from tianshou.data import Batch, ReplayBuffer, to_torch_as
 
+# from pytorch_forecasting import QuantileLoss
+
 
 class A2CPolicy(PGPolicy):
     """Implementation of Synchronous Advantage Actor-Critic. arXiv:1602.01783.
@@ -73,6 +75,7 @@ class A2CPolicy(PGPolicy):
 
         self.use_mixed = use_mixed
         self.scaler = GradScaler(enabled=self.use_mixed)
+        # self.q_loss = QuantileLoss()
 
     def process_fn(
         self, batch: Batch, buffer: ReplayBuffer, indice: np.ndarray
@@ -127,6 +130,7 @@ class A2CPolicy(PGPolicy):
                     # calculate loss for critic
                     value = self.critic(b.obs).flatten()
                     vf_loss = F.mse_loss(b.returns, value)
+                    # vf_loss = self.q_loss(b.returns, value.unsqueeze(1))     # Experiment
                     # calculate regularization and overall loss
                     ent_loss = dist.entropy().mean()
                     loss = actor_loss + self._weight_vf * vf_loss \

@@ -170,8 +170,9 @@ class Net(nn.Module):
             input_dim = state_shape[1]
             if concat:
                 input_dim += action_dim
-            self.model = custom_model(input_dim=input_dim, hidden_sizes=hidden_sizes,
-                            norm_layer=norm_layer, activation=activation, device=device, **custom_model_kwargs)
+            # self.model = custom_model(input_dim=input_dim, hidden_sizes=hidden_sizes,
+            #                 norm_layer=norm_layer, activation=activation, device=device, **custom_model_kwargs)
+            self.model = custom_model(input_dim=input_dim, device=device, **custom_model_kwargs)
 
         self.output_dim = self.model.output_dim
         if self.use_dueling:  # dueling DQN
