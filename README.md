@@ -1,3 +1,6 @@
+
+    pip install git+https://github.com/realiti4/tianshou.git@master --upgrade
+
 <div align="center">
   <a href="http://tianshou.readthedocs.io"><img width="300px" height="auto" src="docs/_static/images/tianshou-logo.png"></a>
 </div>
