@@ -54,8 +54,8 @@ class A2CPolicy(PGPolicy):
         self,
         actor: torch.nn.Module,
         critic: torch.nn.Module,
-        optim: torch.optim.Optimizer,
-        dist_fn: Type[torch.distributions.Distribution],
+        optim: torch.optim.Optimizer = None,
+        dist_fn: Type[torch.distributions.Distribution] = None,
         vf_coef: float = 0.5,
         ent_coef: float = 0.01,
         max_grad_norm: Optional[float] = None,
@@ -88,6 +88,7 @@ class A2CPolicy(PGPolicy):
         self, batch: Batch, buffer: ReplayBuffer, indice: np.ndarray
     ) -> Batch:
         v_s, v_s_ = [], []
+        # with autocast(enabled=self.use_mixed):  # We should do this in fp16 as well
         with torch.no_grad():
             for b in batch.split(self._batch, shuffle=False, merge_last=True):
                 v_s.append(self.critic(b.obs))
@@ -130,7 +131,7 @@ class A2CPolicy(PGPolicy):
                     # calculate loss for critic
                     value = self.critic(b.obs).flatten()
                     vf_loss = F.mse_loss(b.returns, value)
-                    # vf_loss = self.q_loss(b.returns, value.unsqueeze(1))     # Experiment
+                    # vf_loss = F.smooth_l1_loss(b.returns, value)     # Experiment
                     # calculate regularization and overall loss
                     ent_loss = dist.entropy().mean()
                     loss = actor_loss + self._weight_vf * vf_loss \
