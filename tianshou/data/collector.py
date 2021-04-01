@@ -400,12 +400,13 @@ class AsyncCollector(Collector):
                 self.data.update(
                     act=[self._action_space[i].sample() for i in ready_env_ids])
             else:
-                if no_grad:
-                    with torch.no_grad():  # faster than retain_grad version
-                        # self.data.obs will be used by agent to get result
+                with autocast(enabled=self.policy.use_mixed):
+                    if no_grad:
+                        with torch.no_grad():  # faster than retain_grad version
+                            # self.data.obs will be used by agent to get result
+                            result = self.policy(self.data, last_state)
+                    else:
                         result = self.policy(self.data, last_state)
-                else:
-                    result = self.policy(self.data, last_state)
                 # update state / act / policy into self.data
                 policy = result.get("policy", Batch())
                 assert isinstance(policy, Batch)

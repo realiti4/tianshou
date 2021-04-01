@@ -144,6 +144,7 @@ class PPOPolicy(A2CPolicy):
 
                 self.scaler.scale(loss).backward()
                 # loss.backward()
+                
                 if self._grad_norm:  # clip large gradient
                     self.scaler.unscale_(self.optim)
                     nn.utils.clip_grad_norm_(
