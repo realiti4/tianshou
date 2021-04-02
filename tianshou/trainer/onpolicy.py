@@ -29,6 +29,7 @@ def onpolicy_trainer(
     logger: BaseLogger = LazyLogger(),
     verbose: bool = True,
     test_in_train: bool = True,
+    backup_save_freq: int = 0,  # mid save freq for cloud training, 0 is disabled
 ) -> Dict[str, Union[float, str]]:
     """A wrapper for on-policy trainer procedure.
 
@@ -148,6 +149,9 @@ def onpolicy_trainer(
                     data[k] = f"{losses[k]:.3f}"
                 logger.log_update_data(losses, gradient_step)
                 t.set_postfix(**data)
+                if backup_save_freq:    # it has to be dividable by 'n/st'
+                    if t.n % backup_save_freq == 0 and t.n != 0:
+                        save_fn(policy, add='_midsave')  # Dev: backup saves for cloud training
             if t.n <= t.total:
                 t.update()
         # test
