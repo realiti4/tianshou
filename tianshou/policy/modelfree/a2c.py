@@ -4,7 +4,6 @@ from torch import nn
 import torch.nn.functional as F
 from typing import Any, Dict, List, Type, Optional
 from torch.cuda.amp import autocast
-from torch.cuda.amp import GradScaler
 
 from tianshou.policy import PGPolicy
 from tianshou.data import Batch, ReplayBuffer, to_torch_as
@@ -61,7 +60,6 @@ class A2CPolicy(PGPolicy):
         max_grad_norm: Optional[float] = None,
         gae_lambda: float = 0.95,
         max_batchsize: int = 256,
-        use_mixed=False,
         **kwargs: Any
     ) -> None:
         super().__init__(actor, optim, dist_fn, **kwargs)
@@ -72,10 +70,6 @@ class A2CPolicy(PGPolicy):
         self._weight_ent = ent_coef
         self._grad_norm = max_grad_norm
         self._batch = max_batchsize
-
-        self.use_mixed = use_mixed
-        self.scaler = GradScaler(enabled=self.use_mixed)
-        # self.q_loss = QuantileLoss()
 
     def process_fn(
         self, batch: Batch, buffer: ReplayBuffer, indice: np.ndarray

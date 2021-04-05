@@ -6,7 +6,6 @@ from tianshou.policy import A2CPolicy
 from tianshou.data import Batch, ReplayBuffer, to_torch_as
 
 from torch.cuda.amp import autocast
-from torch.cuda.amp import GradScaler
 
 
 class PPOPolicy(A2CPolicy):
@@ -69,7 +68,6 @@ class PPOPolicy(A2CPolicy):
         value_clip: bool = False,
         advantage_normalization: bool = True,
         recompute_advantage: bool = False,
-        use_mixed=False,
         **kwargs: Any,
     ) -> None:
         super().__init__(actor, critic, optim, dist_fn, **kwargs)
@@ -83,9 +81,6 @@ class PPOPolicy(A2CPolicy):
                 "value clip is available only when `reward_normalization` is True"
         self._norm_adv = advantage_normalization
         self._recompute_adv = recompute_advantage
-
-        self.use_mixed = use_mixed
-        self.scaler = GradScaler(enabled=self.use_mixed)
 
     def process_fn(
         self, batch: Batch, buffer: ReplayBuffer, indice: np.ndarray

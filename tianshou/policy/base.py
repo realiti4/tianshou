@@ -2,6 +2,7 @@ import gym
 import torch
 import numpy as np
 from torch import nn
+from torch.cuda.amp import GradScaler
 from numba import njit
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Tuple, Union, Optional, Callable
@@ -62,6 +63,7 @@ class BasePolicy(ABC, nn.Module):
         action_space: Optional[gym.Space] = None,
         action_scaling: bool = False,
         action_bound_method: str = "",
+        use_mixed: bool = False,
     ) -> None:
         super().__init__()
         self.observation_space = observation_space
@@ -73,6 +75,9 @@ class BasePolicy(ABC, nn.Module):
         assert action_bound_method in ("", "clip", "tanh")
         self.action_bound_method = action_bound_method
         self._compile()
+
+        self.use_mixed = use_mixed
+        self.scaler = GradScaler(enabled=self.use_mixed)
 
     def set_agent_id(self, agent_id: int) -> None:
         """Set self.agent_id = agent_id, for MARL."""
