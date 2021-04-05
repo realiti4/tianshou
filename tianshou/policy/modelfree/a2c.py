@@ -82,14 +82,19 @@ class A2CPolicy(PGPolicy):
         self, batch: Batch, buffer: ReplayBuffer, indice: np.ndarray
     ) -> Batch:
         v_s, v_s_ = [], []
-        # with autocast(enabled=self.use_mixed):  # We should do this in fp16 as well
-        with torch.no_grad():
-            for b in batch.split(self._batch, shuffle=False, merge_last=True):
-                v_s.append(self.critic(b.obs))
-                v_s_.append(self.critic(b.obs_next))
+        with autocast(enabled=self.use_mixed):  # We should do this in fp16 as well
+            with torch.no_grad():
+                for b in batch.split(self._batch, shuffle=False, merge_last=True):
+                    v_s.append(self.critic(b.obs))
+                    v_s_.append(self.critic(b.obs_next))
         batch.v_s = torch.cat(v_s, dim=0).flatten()  # old value
-        v_s = batch.v_s.cpu().numpy()
-        v_s_ = torch.cat(v_s_, dim=0).flatten().cpu().numpy()
+        if self.use_mixed:
+            v_s = batch.v_s.float().cpu().numpy()
+            v_s_ = torch.cat(v_s_, dim=0).flatten().float().cpu().numpy()
+        else:
+            v_s = batch.v_s.cpu().numpy()
+            v_s_ = torch.cat(v_s_, dim=0).flatten().cpu().numpy()
+
         # when normalizing values, we do not minus self.ret_rms.mean to be numerically
         # consistent with OPENAI baselines' value normalization pipeline. Emperical
         # study also shows that "minus mean" will harm performances a tiny little bit
