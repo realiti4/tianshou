@@ -70,6 +70,7 @@ class A2CPolicy(PGPolicy):
         self._weight_ent = ent_coef
         self._grad_norm = max_grad_norm
         self._batch = max_batchsize
+        self.optim2 = None
 
     def process_fn(
         self, batch: Batch, buffer: ReplayBuffer, indice: np.ndarray
@@ -122,6 +123,7 @@ class A2CPolicy(PGPolicy):
         for _ in range(repeat):
             for b in batch.split(batch_size, merge_last=True):
                 self.optim.zero_grad()
+                self.optim2.zero_grad()
                 with autocast(enabled=self.use_mixed):
                     # calculate loss for actor
                     dist = self(b).dist
@@ -141,11 +143,13 @@ class A2CPolicy(PGPolicy):
 
                 if self._grad_norm:  # clip large gradient
                     self.scaler.unscale_(self.optim)
+                    self.scaler.unscale_(self.optim2)
                     nn.utils.clip_grad_norm_(
                         list(self.actor.parameters()) + list(self.critic.parameters()),
                         max_norm=self._grad_norm)
 
                 self.scaler.step(self.optim)
+                self.scaler.step(self.optim2)
                 self.scaler.update()
                 # self.optim.step()
                 actor_losses.append(actor_loss.item())
