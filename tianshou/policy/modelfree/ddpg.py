@@ -9,7 +9,6 @@ from tianshou.exploration import BaseNoise, GaussianNoise
 from tianshou.data import Batch, ReplayBuffer
 
 from torch.cuda.amp import autocast
-from torch.cuda.amp import GradScaler
 
 
 class DDPGPolicy(BasePolicy):
@@ -54,7 +53,6 @@ class DDPGPolicy(BasePolicy):
         estimation_step: int = 1,
         action_scaling: bool = True,
         action_bound_method: str = "clip",
-        mixed_precision = False,
         **kwargs: Any,
     ) -> None:
         super().__init__(action_scaling=action_scaling,
@@ -82,9 +80,6 @@ class DDPGPolicy(BasePolicy):
         self._rew_norm = reward_normalization
         self._n_step = estimation_step
 
-        self.use_mixed = mixed_precision
-        self.scaler = GradScaler(enabled=self.use_mixed)
-        
 
     def set_exp_noise(self, noise: Optional[BaseNoise]) -> None:
         """Set the exploration noise."""

@@ -9,7 +9,6 @@ from tianshou.exploration import BaseNoise
 from tianshou.data import Batch, ReplayBuffer, to_torch_as
 
 from torch.cuda.amp import autocast
-from torch.cuda.amp import GradScaler
 
 
 class SACPolicy(DDPGPolicy):

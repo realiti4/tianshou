@@ -110,25 +110,26 @@ class Critic(nn.Module):
         """Mapping: (s, a) -> logits -> Q(s, a)."""       
 
         # New - Fix input for custom cnn
-        s = torch.as_tensor(
-            s, device=self.device, dtype=torch.float32  # type: ignore
-        )        
-        if a is not None:
-            a = torch.as_tensor(
-                a, device=self.device, dtype=torch.float32  # type: ignore
-            ).flatten(1)
-            a = a.repeat(1, 720).unsqueeze(2)
-            s = torch.cat([s, a], dim=2)
-        logits, h = self.preprocess(s)
-        logits = self.last(logits)
-        return logits
+        dev = False
+
+        if dev:
+            s = torch.as_tensor(
+                s, device=self.device, dtype=torch.float32  # type: ignore
+            )        
+            if a is not None:
+                a = torch.as_tensor(
+                    a, device=self.device, dtype=torch.float32  # type: ignore
+                ).flatten(1)
+                a = a.repeat(1, 720).unsqueeze(2)
+                s = torch.cat([s, a], dim=2)
+            logits, h = self.preprocess(s)
+            logits = self.last(logits)
+            return logits
 
         # Org one
         s = torch.as_tensor(
             s, device=self.device, dtype=torch.float32  # type: ignore
-        )
-
-        s = s.flatten(1)
+        ).flatten(1)
 
         if a is not None:
             a = torch.as_tensor(
@@ -204,7 +205,7 @@ class ActorProb(nn.Module):
         """Mapping: s -> logits -> (mu, sigma)."""
         logits, h = self.preprocess(s, state)
         mu = self.mu(logits)
-        mu = torch.tanh(mu)
+        # mu = torch.tanh(mu)   Dev: test this later
         if not self._unbounded:
             mu = self._max * torch.tanh(mu)
         if self._c_sigma:
