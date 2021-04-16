@@ -114,7 +114,7 @@ class DDPGPolicy(BasePolicy):
     ) -> Batch:
         batch = self.compute_nstep_return(
             batch, buffer, indice, self._target_q,
-            self._gamma, self._n_step, self._rew_norm)
+            self._gamma, self._n_step, self._rew_norm, self.use_mixed)
         return batch
 
     def forward(

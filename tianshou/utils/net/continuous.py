@@ -110,9 +110,7 @@ class Critic(nn.Module):
         """Mapping: (s, a) -> logits -> Q(s, a)."""       
 
         # New - Fix input for custom cnn
-        dev = False
-
-        if dev:
+        if len(s.shape) == 3:   # if conv is used for preprocess, use this aproach
             s = torch.as_tensor(
                 s, device=self.device, dtype=torch.float32  # type: ignore
             )        

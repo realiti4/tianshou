@@ -3,6 +3,7 @@ import torch
 import numpy as np
 from torch import nn
 from torch.cuda.amp import GradScaler
+from torch.cuda.amp import autocast
 from numba import njit
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Tuple, Union, Optional, Callable
@@ -320,6 +321,7 @@ class BasePolicy(ABC, nn.Module):
         gamma: float = 0.99,
         n_step: int = 1,
         rew_norm: bool = False,
+        use_mixed: bool = False,
     ) -> Batch:
         r"""Compute n-step return for Q-learning targets.
 
@@ -353,8 +355,9 @@ class BasePolicy(ABC, nn.Module):
         # terminal indicates buffer indexes nstep after 'indice',
         # and are truncated at the end of each episode
         terminal = indices[-1]
-        with torch.no_grad():
-            target_q_torch = target_q_fn(buffer, terminal)  # (bsz, ?)
+        with autocast(enabled=use_mixed):
+            with torch.no_grad():
+                target_q_torch = target_q_fn(buffer, terminal)  # (bsz, ?)
         target_q = to_numpy(target_q_torch.reshape(bsz, -1))
         target_q = target_q * BasePolicy.value_mask(buffer, terminal).reshape(-1, 1)
         end_flag = buffer.done.copy()

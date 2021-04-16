@@ -150,9 +150,9 @@ class SACPolicy(DDPGPolicy):
         
         # critic 1&2
         td1, critic1_loss = self._mse_optimizer(
-            batch, self.critic1, self.critic1_optim, None, False)
+            batch, self.critic1, self.critic1_optim, self.scaler, self.use_mixed)
         td2, critic2_loss = self._mse_optimizer(
-            batch, self.critic2, self.critic2_optim, None, False)
+            batch, self.critic2, self.critic2_optim, self.scaler, self.use_mixed)
         batch.weight = (td1 + td2) / 2.0  # prio-buffer
         
         with autocast(enabled=self.use_mixed):
