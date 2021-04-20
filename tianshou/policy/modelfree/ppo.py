@@ -91,9 +91,10 @@ class PPOPolicy(A2CPolicy):
         batch = self._compute_returns(batch, buffer, indice)
         batch.act = to_torch_as(batch.act, batch.v_s)
         old_log_prob = []
-        with torch.no_grad():
-            for b in batch.split(self._batch, shuffle=False, merge_last=True):
-                old_log_prob.append(self(b).dist.log_prob(b.act))
+        with autocast(enabled=self.use_mixed):
+            with torch.no_grad():
+                for b in batch.split(self._batch, shuffle=False, merge_last=True):
+                    old_log_prob.append(self(b).dist.log_prob(b.act))
         batch.logp_old = torch.cat(old_log_prob, dim=0)
         return batch
 

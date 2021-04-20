@@ -358,7 +358,7 @@ class BasePolicy(ABC, nn.Module):
         with autocast(enabled=use_mixed):
             with torch.no_grad():
                 target_q_torch = target_q_fn(buffer, terminal)  # (bsz, ?)
-        target_q = to_numpy(target_q_torch.reshape(bsz, -1))
+        target_q = to_numpy(target_q_torch.float().reshape(bsz, -1))
         target_q = target_q * BasePolicy.value_mask(buffer, terminal).reshape(-1, 1)
         end_flag = buffer.done.copy()
         end_flag[buffer.unfinished_index()] = True
