@@ -212,7 +212,7 @@ class Collector(object):
                     else:
                         result = self.policy(self.data, last_state)
                 # update state / act / policy into self.data
-                policy = result.get("policy", Batch())      # how is this getting? = Batch()
+                policy = result.get("policy", Batch())
                 assert isinstance(policy, Batch)
                 state = result.get("state", None)           # None
                 if state is not None:
