@@ -7,11 +7,11 @@ import tempfile
 import numpy as np
 from timeit import timeit
 
-from tianshou.data.utils.converter import to_hdf5
-from tianshou.data import Batch, SegmentTree, ReplayBuffer
-from tianshou.data import PrioritizedReplayBuffer
-from tianshou.data import VectorReplayBuffer, CachedReplayBuffer
-from tianshou.data import PrioritizedVectorReplayBuffer
+from tianshou_legacy.data.utils.converter import to_hdf5
+from tianshou_legacy.data import Batch, SegmentTree, ReplayBuffer
+from tianshou_legacy.data import PrioritizedReplayBuffer
+from tianshou_legacy.data import VectorReplayBuffer, CachedReplayBuffer
+from tianshou_legacy.data import PrioritizedVectorReplayBuffer
 
 
 if __name__ == '__main__':

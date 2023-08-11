@@ -7,12 +7,12 @@ import argparse
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 
-from tianshou.utils import BasicLogger
-from tianshou.env import SubprocVectorEnv
-from tianshou.trainer import offline_trainer
-from tianshou.utils.net.discrete import Actor
-from tianshou.policy import DiscreteBCQPolicy
-from tianshou.data import Collector, VectorReplayBuffer
+from tianshou_legacy.utils import BasicLogger
+from tianshou_legacy.env import SubprocVectorEnv
+from tianshou_legacy.trainer import offline_trainer
+from tianshou_legacy.utils.net.discrete import Actor
+from tianshou_legacy.policy import DiscreteBCQPolicy
+from tianshou_legacy.data import Collector, VectorReplayBuffer
 
 from atari_network import DQN
 from atari_wrapper import wrap_deepmind

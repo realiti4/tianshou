@@ -2,8 +2,8 @@ import sys
 import time
 import numpy as np
 from gym.spaces.discrete import Discrete
-from tianshou.data import Batch
-from tianshou.env import DummyVectorEnv, SubprocVectorEnv, \
+from tianshou_legacy.data import Batch
+from tianshou_legacy.env import DummyVectorEnv, SubprocVectorEnv, \
     ShmemVectorEnv, RayVectorEnv
 
 if __name__ == '__main__':

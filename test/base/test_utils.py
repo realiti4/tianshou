@@ -1,10 +1,10 @@
 import torch
 import numpy as np
 
-from tianshou.utils.net.common import MLP, Net
-from tianshou.utils import MovAvg, RunningMeanStd
-from tianshou.exploration import GaussianNoise, OUNoise
-from tianshou.utils.net.continuous import RecurrentActorProb, RecurrentCritic
+from tianshou_legacy.utils.net.common import MLP, Net
+from tianshou_legacy.utils import MovAvg, RunningMeanStd
+from tianshou_legacy.exploration import GaussianNoise, OUNoise
+from tianshou_legacy.utils.net.continuous import RecurrentActorProb, RecurrentCritic
 
 
 def test_noise():

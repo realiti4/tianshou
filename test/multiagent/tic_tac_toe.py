@@ -6,12 +6,12 @@ from copy import deepcopy
 from typing import Optional, Tuple
 from torch.utils.tensorboard import SummaryWriter
 
-from tianshou.utils import BasicLogger
-from tianshou.env import DummyVectorEnv
-from tianshou.utils.net.common import Net
-from tianshou.trainer import offpolicy_trainer
-from tianshou.data import Collector, VectorReplayBuffer
-from tianshou.policy import BasePolicy, DQNPolicy, RandomPolicy, \
+from tianshou_legacy.utils import BasicLogger
+from tianshou_legacy.env import DummyVectorEnv
+from tianshou_legacy.utils.net.common import Net
+from tianshou_legacy.trainer import offpolicy_trainer
+from tianshou_legacy.data import Collector, VectorReplayBuffer
+from tianshou_legacy.policy import BasePolicy, DQNPolicy, RandomPolicy, \
     MultiAgentPolicyManager
 
 from tic_tac_toe_env import TicTacToeEnv

@@ -7,12 +7,12 @@ import argparse
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 
-from tianshou.data import Collector
-from tianshou.utils import BasicLogger
-from tianshou.env import DummyVectorEnv
-from tianshou.utils.net.common import Net
-from tianshou.trainer import offline_trainer
-from tianshou.policy import DiscreteBCQPolicy
+from tianshou_legacy.data import Collector
+from tianshou_legacy.utils import BasicLogger
+from tianshou_legacy.env import DummyVectorEnv
+from tianshou_legacy.utils.net.common import Net
+from tianshou_legacy.trainer import offline_trainer
+from tianshou_legacy.policy import DiscreteBCQPolicy
 
 
 def get_args():

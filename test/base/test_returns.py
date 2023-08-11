@@ -2,8 +2,8 @@ import torch
 import numpy as np
 from timeit import timeit
 
-from tianshou.policy import BasePolicy
-from tianshou.data import Batch, ReplayBuffer, to_numpy
+from tianshou_legacy.policy import BasePolicy
+from tianshou_legacy.data import Batch, ReplayBuffer, to_numpy
 
 
 def compute_episodic_return_base(batch, gamma):

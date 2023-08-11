@@ -7,7 +7,7 @@ import numpy as np
 import networkx as nx
 from itertools import starmap
 
-from tianshou.data import Batch, to_torch, to_numpy
+from tianshou_legacy.data import Batch, to_torch, to_numpy
 
 
 def test_batch():

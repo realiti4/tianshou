@@ -6,9 +6,9 @@ import numpy as np
 from collections import Counter
 from torch.utils.data import Dataset, DataLoader, DistributedSampler
 
-from tianshou.policy import BasePolicy
-from tianshou.data import Collector, Batch
-from tianshou.env import BaseVectorEnv, DummyVectorEnv, SubprocVectorEnv
+from tianshou_legacy.policy import BasePolicy
+from tianshou_legacy.data import Collector, Batch
+from tianshou_legacy.env import BaseVectorEnv, DummyVectorEnv, SubprocVectorEnv
 
 
 class DummyDataset(Dataset):

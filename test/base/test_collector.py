@@ -3,10 +3,10 @@ import pytest
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 
-from tianshou.policy import BasePolicy
-from tianshou.env import DummyVectorEnv, SubprocVectorEnv
-from tianshou.data import Batch, Collector, AsyncCollector
-from tianshou.data import (
+from tianshou_legacy.policy import BasePolicy
+from tianshou_legacy.env import DummyVectorEnv, SubprocVectorEnv
+from tianshou_legacy.data import Batch, Collector, AsyncCollector
+from tianshou_legacy.data import (
     ReplayBuffer,
     PrioritizedReplayBuffer,
     VectorReplayBuffer,

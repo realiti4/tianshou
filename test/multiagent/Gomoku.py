@@ -4,10 +4,10 @@ import numpy as np
 from copy import deepcopy
 from torch.utils.tensorboard import SummaryWriter
 
-from tianshou.env import DummyVectorEnv
-from tianshou.data import Collector
-from tianshou.policy import RandomPolicy
-from tianshou.utils import BasicLogger
+from tianshou_legacy.env import DummyVectorEnv
+from tianshou_legacy.data import Collector
+from tianshou_legacy.policy import RandomPolicy
+from tianshou_legacy.utils import BasicLogger
 
 from tic_tac_toe_env import TicTacToeEnv
 from tic_tac_toe import get_parser, get_agents, train_agent, watch

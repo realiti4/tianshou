@@ -1,9 +1,9 @@
 import tqdm
 import numpy as np
 
-from tianshou.policy import BasePolicy
-from tianshou.env import DummyVectorEnv, SubprocVectorEnv
-from tianshou.data import Batch, Collector, AsyncCollector, VectorReplayBuffer
+from tianshou_legacy.policy import BasePolicy
+from tianshou_legacy.env import DummyVectorEnv, SubprocVectorEnv
+from tianshou_legacy.data import Batch, Collector, AsyncCollector, VectorReplayBuffer
 
 if __name__ == '__main__':
     from env import MyTestEnv

@@ -3,7 +3,7 @@ import numpy as np
 from functools import partial
 from typing import Tuple, Optional
 
-from tianshou.env import MultiAgentEnv
+from tianshou_legacy.env import MultiAgentEnv
 
 
 class TicTacToeEnv(MultiAgentEnv):

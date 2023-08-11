@@ -15,11 +15,11 @@
 # sys.path.insert(0, os.path.abspath('.'))
 
 
-import tianshou
+import tianshou_legacy
 import sphinx_rtd_theme
 
 # Get the version string
-version = tianshou.__version__
+version = tianshou_legacy.__version__
 
 # -- Project information -----------------------------------------------------
 

@@ -3,7 +3,7 @@ import gym
 import time
 import tqdm
 import numpy as np
-from tianshou.data import Batch, ReplayBuffer, VectorReplayBuffer
+from tianshou_legacy.data import Batch, ReplayBuffer, VectorReplayBuffer
 
 
 def test_replaybuffer(task="Pendulum-v0"):

@@ -7,12 +7,12 @@ from setuptools import setup, find_packages
 
 def get_version() -> str:
     # https://packaging.python.org/guides/single-sourcing-package-version/
-    init = open(os.path.join("tianshou", "__init__.py"), "r").read().split()
+    init = open(os.path.join("tianshou_legacy", "__init__.py"), "r").read().split()
     return init[init.index("__version__") + 2][1:-1]
 
 
 setup(
-    name="tianshou",
+    name="tianshou_legacy",
     version=get_version(),
     description="A Library for Deep Reinforcement Learning",
     long_description=open("README.md", encoding="utf8").read(),

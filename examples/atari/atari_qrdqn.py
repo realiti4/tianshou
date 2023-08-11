@@ -5,11 +5,11 @@ import argparse
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 
-from tianshou.utils import BasicLogger
-from tianshou.policy import QRDQNPolicy
-from tianshou.env import SubprocVectorEnv
-from tianshou.trainer import offpolicy_trainer
-from tianshou.data import Collector, VectorReplayBuffer
+from tianshou_legacy.utils import BasicLogger
+from tianshou_legacy.policy import QRDQNPolicy
+from tianshou_legacy.env import SubprocVectorEnv
+from tianshou_legacy.trainer import offpolicy_trainer
+from tianshou_legacy.data import Collector, VectorReplayBuffer
 
 from atari_network import QRDQN
 from atari_wrapper import wrap_deepmind
